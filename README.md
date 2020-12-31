@@ -3,6 +3,8 @@
 Download just a sub directory from a GitHub repo
 
 Node.js port for [`download-directory.github.io`](https://github.com/download-directory/download-directory.github.io)
+
+Recursively (with subdirectories) downloads files only from specified directory via https://raw.githubusercontent.com/
  
 
 ```sh
@@ -14,10 +16,12 @@ npm i github-directory-downloader
 import download from 'github-directory-downloader';
 import { resolve } from 'path';
 
-// Will download content of docs/manual into "../temp" 
+// Will download content inside docs/manual into "../temp" 
 // and return statistics for downloaded files
-const stats = await download('https://github.com/mrdoob/three.js/tree/dev/docs/manual',
-    resolve(__dirname, '../temp'));
+const stats = await download(
+    'https://github.com/mrdoob/three.js/tree/dev/docs/manual',
+    resolve(__dirname, '../temp')
+);
 ```
 
 You can also pass options as a third argument:
@@ -25,11 +29,10 @@ You can also pass options as a third argument:
 {
     /** JWT token for authorization in private repositories */
     token?: string;
-    
-    /** Download mode. 
-     * 'async' - make as many async requests as possible. Fast downloading for small repos
-     * but your IP can get blocked for too many requests;  
-     * 'sync' - by default. Dowload files ony by one */
-    mode?: 'sync' | 'async';
+
+    /** Max number of async requests at the same time. 10 by default.
+     * download-directory.github.io has no limit, but it can lead to IP blocking
+     */
+    requests?: number;
 }
 ```

@@ -104,11 +104,10 @@ export default async function download(source: string, saveTo: string, config?: 
     /** JWT token for authorization in private repositories */
     token?: string;
 
-    /** Download mode. 
-     * 'async' - make as many async requests as possible. Fast downloading for small repos
-     * but your IP can get blocked for too many requests;
-     * 'sync' - by default. Dowload files ony by one */
-    mode?: 'sync' | 'async';
+    /** Max number of async requests at the same time. 10 by default.
+     * download-directory.github.io has no limit, but it can lead to IP blocking
+     */
+    requests?: number;
 }) {
 
     const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
@@ -165,49 +164,52 @@ export default async function download(source: string, saveTo: string, config?: 
     const stats: { files: Record<string, string>; downloaded: number } = { files: {}, downloaded: 0 };
 
     const download = async (file: TreeItem) => {
+        let response;
         try {
-            const response = repoIsPrivate ?
-                await fetchPrivateFile(file) :
+            response = repoIsPrivate ? await fetchPrivateFile(file) :
                 await fetchPublicFile(file);
+        } catch (e) {
+            console.log('⚠ Failed to download file: ' + file.path, e);
+            try {
+                response = repoIsPrivate ? await fetchPrivateFile(file) :
+                    await fetchPublicFile(file);
+            } catch (e) {
+                console.log('⚠ Failed to download file after second attempt: ' + file.path, e);
+                return;
+            }
+        }
 
+        try {
             downloaded++;
 
             const fileName = resolve(saveTo, file.path.replace(dir + '/', ''));
+
             await fs.ensureDir(dirname(fileName));
             await streamPipeline(response.body, fs.createWriteStream(fileName));
+
             stats.files[file.path] = fileName;
 
         } catch (e) {
-            console.error('Failed to download file: ' + file.path, e);
+            console.error('Failed to write file: ' + file.path, e);
         }
     };
 
-    if (config?.mode === 'async') {
-        try {
-            await Promise.all(files.map(download));
-        } catch (e) {
-            console.error(e)
-            if (e.message.startsWith('HTTP ')) {
-                console.log('⚠ Could not download all files.');
-            }
+    const requests = config?.requests ?? 10;
+    const statuses: Promise<void>[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+        const num = i % requests;
+        if (statuses[num]) {
+            await statuses[num];
         }
-    } else {
-        // sync by default
-        for (const file of files) {
-            try {
-                await download(file);
-            } catch (e) {
-                console.log('⚠ Failed to download file: ' + file.path, e);
-                try {
-                    await download(file);
-                } catch (e) {
-                    console.log('⚠ Failed to download file after second attempt: ' + file.path, e);
-                }
-            }
-        }
+        statuses[num] = download(files[i]);
     }
 
+    await Promise.all(statuses);
+
+
     console.log(`Downloaded ${downloaded}/${files.length} files`);
+
     stats.downloaded = downloaded;
     return stats;
 }
