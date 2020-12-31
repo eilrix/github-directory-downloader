@@ -1,12 +1,10 @@
 {
-  "name": "github-download-dir",
+  "name": "github-directory-downloader",
   "version": "1.0.0",
   "description": "Download just a sub directory from a GitHub repo",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "/dist"
-  ],
+  "files": [ "dist" ],
   "homepage": "https://github.com/eilrix/github-download-dir",
   "repository": {
     "type": "git",
@@ -35,12 +33,8 @@
     "fs-extra": "^9.0.1",
     "node-fetch": "^2.6.1"
   },
-  "readmeFilename": "README.md",
   "bugs": {
-    "url": "https://github.com/peteward44/node-svn-ultimate/issues"
+    "url": "https://github.com/eilrix/github-download-dir/issues"
   },
-  "keywords": [
-    "github-download-directory",
-    "download-directory.github.io"
-  ]
+  "keywords": []
 }

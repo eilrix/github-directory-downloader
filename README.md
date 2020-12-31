@@ -1,4 +1,4 @@
-# github-download-dir
+# github-directory-downloader
 
 Download just a sub directory from a GitHub repo
 
@@ -6,12 +6,12 @@ Node.js port for download-directory.github.io
 https://github.com/download-directory/download-directory.github.io 
 
 ```sh
-npm i github-download-dir
+npm i github-directory-downloader
 ```
 
 ## Usage
 ```typescript
-import download from 'github-download-dir';
+import download from 'github-directory-downloader';
 import { resolve } from 'path';
 
 // Will download content of docs/manual into "../temp" and return statistics for downloaded files

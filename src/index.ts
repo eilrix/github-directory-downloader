@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import { dirname, resolve } from 'path';
 import { promisify } from 'util';
 
-const streamPipeline = promisify(require('stream').pipeline)
+const streamPipeline = promisify(require('stream').pipeline);
 
 type TreeItem = {
     path: string;
