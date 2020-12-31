@@ -55,15 +55,6 @@ async function fetchRepoInfo(repo: string, token?: string) {
     return response.json();
 }
 
-async function api(endpoint: string, token?: string) {
-    const response = await fetch(`https://api.github.com/repos/${endpoint}`, {
-        headers: token ? {
-            Authorization: `Bearer ${token}`
-        } : undefined
-    });
-    return response.json();
-}
-
 
 // Great for downloads with many sub directories
 // Pros: one request + maybe doesn't require token
@@ -93,7 +84,7 @@ async function viaTreesApi({
         tree: TreeItem[];
         message?: string;
         truncated: boolean;
-    } = await api(`${user}/${repository}/git/trees/${ref}?recursive=1`, token);
+    } = await fetchRepoInfo(`${user}/${repository}/git/trees/${ref}?recursive=1`, token);
 
     if (contents.message) {
         throw new Error(contents.message);
@@ -115,8 +106,8 @@ export default async function download(source: string, saveTo: string, config?: 
 
     /** Download mode. 
      * 'async' - make as many async requests as possible. Fast downloading for small repos
-     * but your IP can get blocked for too many requests  
-     * 'sync' - by default. Dowloading files ony by one */
+     * but your IP can get blocked for too many requests;
+     * 'sync' - by default. Dowload files ony by one */
     mode?: 'sync' | 'async';
 }) {
 

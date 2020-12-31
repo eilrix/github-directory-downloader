@@ -2,8 +2,8 @@
 
 Download just a sub directory from a GitHub repo
 
-Node.js port for download-directory.github.io 
-https://github.com/download-directory/download-directory.github.io 
+Node.js port for [`download-directory.github.io`](https://github.com/download-directory/download-directory.github.io)
+ 
 
 ```sh
 npm i github-directory-downloader
@@ -28,8 +28,8 @@ You can also pass options as a third argument:
     
     /** Download mode. 
      * 'async' - make as many async requests as possible. Fast downloading for small repos
-     * but your IP can get blocked for too many requests  
-     * 'sync' - by default. Dowloading files ony by one */
+     * but your IP can get blocked for too many requests;  
+     * 'sync' - by default. Dowload files ony by one */
     mode?: 'sync' | 'async';
 }
 ```
