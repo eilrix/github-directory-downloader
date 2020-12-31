@@ -14,6 +14,11 @@ npm i github-download-dir
 import download from 'github-download-dir';
 import { resolve } from 'path';
 
-const stats = await download('https://github.com/mrdoob/three.js/tree/dev/docs/manual', 
-    resolve(__dirname, '../temp'));
+// Will download content of docs/manual into "../temp" and return statistics for downloaded files
+const stats = await download('https://github.com/mrdoob/three.js/tree/dev/docs/manual', resolve(__dirname, '../temp'));
+
+
+// For private repositories use authorization token
+const token = '!@#$%^';
+await download('https://github.com/mrdoob/three.js/tree/dev/', resolve(__dirname, '../temp'), token);
 ```
