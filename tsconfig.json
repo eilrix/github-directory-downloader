@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ES2019",
+        "module": "commonjs",
+        "strict": true,
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "types": [
+            "node",
+            "mocha"
+        ],
+        "outDir": "dist",
+        "declaration": true
+    },
+    "exclude": [
+        "./tests/",
+        "./node_modules/",
+        "./dist/"
+    ],
+}
