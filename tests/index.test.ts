@@ -12,6 +12,8 @@ describe('download', async function () {
 
         expect(Boolean(stats)).to.be.true;
 
+        expect(stats?.success).to.be.true;
+
         expect(stats?.downloaded).to.be.eql(Object.keys(stats?.files ?? {}).length);
 
         await fs.remove(tempDir);

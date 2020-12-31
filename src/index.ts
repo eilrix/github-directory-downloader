@@ -113,7 +113,7 @@ export default async function download(source: string, saveTo: string, config?: 
     const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
 
     if (!user || !repository) {
-        console.error('Invalid url');
+        console.error('Invalid url. It must match: ', urlParserRegex);
         return;
     }
 
@@ -161,7 +161,11 @@ export default async function download(source: string, saveTo: string, config?: 
     };
 
     let downloaded = 0;
-    const stats: { files: Record<string, string>; downloaded: number } = { files: {}, downloaded: 0 };
+    const stats: {
+        files: Record<string, string>;
+        downloaded: number;
+        success: boolean;
+    } = { files: {}, downloaded: 0, success: false };
 
     const download = async (file: TreeItem) => {
         let response;
@@ -211,5 +215,8 @@ export default async function download(source: string, saveTo: string, config?: 
     console.log(`Downloaded ${downloaded}/${files.length} files`);
 
     stats.downloaded = downloaded;
+
+    if (files.length === downloaded) stats.success = true;
+
     return stats;
 }
