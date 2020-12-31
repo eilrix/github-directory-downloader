@@ -14,11 +14,22 @@ npm i github-directory-downloader
 import download from 'github-directory-downloader';
 import { resolve } from 'path';
 
-// Will download content of docs/manual into "../temp" and return statistics for downloaded files
-const stats = await download('https://github.com/mrdoob/three.js/tree/dev/docs/manual', resolve(__dirname, '../temp'));
+// Will download content of docs/manual into "../temp" 
+// and return statistics for downloaded files
+const stats = await download('https://github.com/mrdoob/three.js/tree/dev/docs/manual',
+    resolve(__dirname, '../temp'));
+```
 
-
-// For private repositories use authorization token
-const token = '!@#$%^';
-await download('https://github.com/mrdoob/three.js/tree/dev/', resolve(__dirname, '../temp'), token);
+You can also pass options as a third argument:
+```typescript
+{
+    /** JWT token for authorization in private repositories */
+    token?: string;
+    
+    /** Download mode. 
+     * 'async' - make as many async requests as possible. Fast downloading for small repos
+     * but your IP can get blocked for too many requests  
+     * 'sync' - by default. Dowloading files ony by one */
+    mode?: 'sync' | 'async';
+}
 ```

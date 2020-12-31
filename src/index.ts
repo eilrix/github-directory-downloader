@@ -109,7 +109,16 @@ async function viaTreesApi({
 }
 
 
-export default async function download(source: string, saveTo: string, token?: string) {
+export default async function download(source: string, saveTo: string, config?: {
+    /** JWT token for authorization in private repositories */
+    token?: string;
+
+    /** Download mode. 
+     * 'async' - make as many async requests as possible. Fast downloading for small repos
+     * but your IP can get blocked for too many requests  
+     * 'sync' - by default. Dowloading files ony by one */
+    mode?: 'sync' | 'async';
+}) {
 
     const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
 
@@ -118,14 +127,14 @@ export default async function download(source: string, saveTo: string, token?: s
         return;
     }
 
-    const { private: repoIsPrivate } = await fetchRepoInfo(`${user}/${repository}`, token);
+    const { private: repoIsPrivate } = await fetchRepoInfo(`${user}/${repository}`, config?.token);
 
     const files = await viaTreesApi({
         user,
         repository,
         ref,
         directory: decodeURIComponent(dir),
-        token,
+        token: config?.token,
     });
 
     if (files.length === 0) {
@@ -149,7 +158,7 @@ export default async function download(source: string, saveTo: string, token?: s
     const fetchPrivateFile = async (file: TreeItem) => {
         const response = await fetch(file.url, {
             headers: {
-                Authorization: `Bearer ${token}`
+                Authorization: `Bearer ${config?.token}`
             },
         });
 
@@ -182,15 +191,28 @@ export default async function download(source: string, saveTo: string, token?: s
         }
     };
 
-
-    try {
-        await Promise.all(files.map(download));
-    } catch (e) {
-        console.error(e)
-        if (e.message.startsWith('HTTP ')) {
-            console.log('⚠ Could not download all files.');
-        } else {
-            console.log('⚠ Some files were blocked from downloading, try to disable any ad blockers and refresh the page.');
+    if (config?.mode === 'async') {
+        try {
+            await Promise.all(files.map(download));
+        } catch (e) {
+            console.error(e)
+            if (e.message.startsWith('HTTP ')) {
+                console.log('⚠ Could not download all files.');
+            }
+        }
+    } else {
+        // sync by default
+        for (const file of files) {
+            try {
+                await download(file);
+            } catch (e) {
+                console.log('⚠ Failed to download file: ' + file.path, e);
+                try {
+                    await download(file);
+                } catch (e) {
+                    console.log('⚠ Failed to download file after second attempt: ' + file.path, e);
+                }
+            }
         }
     }
 
