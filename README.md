@@ -34,5 +34,8 @@ You can also pass options as a third argument:
      * download-directory.github.io has no limit, but it can lead to IP blocking
      */
     requests?: number;
+
+    /** Disable console logs */
+    muteLog?: boolean;
 }
 ```

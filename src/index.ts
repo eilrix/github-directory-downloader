@@ -3,21 +3,14 @@ import fetch from 'node-fetch';
 import { dirname, resolve } from 'path';
 import { promisify } from 'util';
 
-const streamPipeline = promisify(require('stream').pipeline);
+import { Config, Stats, TreeItem } from './types';
 
-type TreeItem = {
-    path: string;
-    mode: string;
-    type: string;
-    sha: string;
-    size: number;
-    url: string;
-}
+const streamPipeline = promisify(require('stream').pipeline);
 
 // Matches '/<re/po>/tree/<ref>/<dir>'
 const urlParserRegex = /^[/]([^/]+)[/]([^/]+)[/]tree[/]([^/]+)[/](.*)/;
 
-async function fetchRepoInfo(repo: string, token?: string) {
+async function fetchRepoInfo(repo: string, token?: string, muteLog?: boolean) {
     const response = await fetch(`https://api.github.com/repos/${repo}`,
         token ? {
             headers: {
@@ -28,49 +21,47 @@ async function fetchRepoInfo(repo: string, token?: string) {
 
     switch (response.status) {
         case 401:
-            console.log('⚠ The token provided is invalid or has been revoked.', { token: token });
+            if (!muteLog) console.log('⚠ The token provided is invalid or has been revoked.', { token: token });
             throw new Error('Invalid token');
 
         case 403:
             // See https://developer.github.com/v3/#rate-limiting
             if (response.headers.get('X-RateLimit-Remaining') === '0') {
-                console.log('⚠ Your token rate limit has been exceeded.', { token: token });
+                if (!muteLog) console.log('⚠ Your token rate limit has been exceeded.', { token: token });
                 throw new Error('Rate limit exceeded');
             }
 
             break;
 
         case 404:
-            console.log('⚠ Repository was not found.', { repo });
+            if (!muteLog) console.log('⚠ Repository was not found.', { repo });
             throw new Error('Repository not found');
 
         default:
     }
 
     if (!response.ok) {
-        console.log('⚠ Could not obtain repository data from the GitHub API.', { repo, response });
+        if (!muteLog) console.log('⚠ Could not obtain repository data from the GitHub API.', { repo, response });
         throw new Error('Fetch error');
     }
 
     return response.json();
 }
 
-
-// Great for downloads with many sub directories
-// Pros: one request + maybe doesn't require token
-// Cons: huge on huge repos + may be truncated
 async function viaTreesApi({
     user,
     repository,
     ref = 'HEAD',
     directory,
     token,
+    muteLog
 }: {
     user: string;
     repository: string;
     ref: string;
     directory: string;
     token?: string;
+    muteLog?: boolean;
 }) {
     if (!directory.endsWith('/')) {
         directory += '/';
@@ -84,7 +75,7 @@ async function viaTreesApi({
         tree: TreeItem[];
         message?: string;
         truncated: boolean;
-    } = await fetchRepoInfo(`${user}/${repository}/git/trees/${ref}?recursive=1`, token);
+    } = await fetchRepoInfo(`${user}/${repository}/git/trees/${ref}?recursive=1`, token, muteLog);
 
     if (contents.message) {
         throw new Error(contents.message);
@@ -99,40 +90,66 @@ async function viaTreesApi({
     return files;
 }
 
+async function getRepoMeta(user: string, repository: string, ref: string, dir: string, config?: Config) {
 
-export default async function download(source: string, saveTo: string, config?: {
-    /** JWT token for authorization in private repositories */
-    token?: string;
+    const repoIsPrivate: boolean = (await fetchRepoInfo(`${user}/${repository}`, config?.token, config?.muteLog)).private;
 
-    /** Max number of async requests at the same time. 10 by default.
-     * download-directory.github.io has no limit, but it can lead to IP blocking
-     */
-    requests?: number;
-}) {
-
-    const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
-
-    if (!user || !repository) {
-        console.error('Invalid url. It must match: ', urlParserRegex);
-        return;
-    }
-
-    const { private: repoIsPrivate } = await fetchRepoInfo(`${user}/${repository}`, config?.token);
-
-    const files = await viaTreesApi({
+    const files: TreeItem[] = await viaTreesApi({
         user,
         repository,
         ref,
         directory: decodeURIComponent(dir),
         token: config?.token,
+        muteLog: config?.muteLog,
     });
 
-    if (files.length === 0) {
-        console.log('No files to download');
-        return;
+    return {
+        files,
+        repoIsPrivate
+    }
+}
+
+
+export default async function download(source: string, saveTo: string, config?: Config): Promise<Stats> {
+
+    const stats: Stats = { files: {}, downloaded: 0, success: false };
+
+    const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
+
+    if (!user || !repository) {
+        if (!config?.muteLog) console.error('Invalid url. It must match: ', urlParserRegex);
+        stats.error = 'Invalid url';
+        return stats;
     }
 
-    console.log(`Downloading ${files.length} files…`);
+
+    let meta;
+    try {
+        meta = await getRepoMeta(user, repository, ref, dir, config)
+    } catch (e) {
+        if (!config?.muteLog) console.error('Failed to fetch repo meta info: ', e);
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        try {
+            meta = await getRepoMeta(user, repository, ref, dir, config)
+        } catch (e) {
+            if (!config?.muteLog) console.error('Failed to fetch repo meta info after second attempt: ', e);
+
+            stats.error = e;
+            return stats;
+        }
+    }
+
+    const { files, repoIsPrivate } = meta;
+
+    if (files.length === 0) {
+        if (!config?.muteLog) console.log('No files to download');
+        stats.success = true;
+        return stats;
+    }
+
+    if (!config?.muteLog) console.log(`Downloading ${files.length} files…`);
 
 
     const fetchPublicFile = async (file: TreeItem) => {
@@ -161,11 +178,6 @@ export default async function download(source: string, saveTo: string, config?: 
     };
 
     let downloaded = 0;
-    const stats: {
-        files: Record<string, string>;
-        downloaded: number;
-        success: boolean;
-    } = { files: {}, downloaded: 0, success: false };
 
     const download = async (file: TreeItem) => {
         let response;
@@ -173,12 +185,15 @@ export default async function download(source: string, saveTo: string, config?: 
             response = repoIsPrivate ? await fetchPrivateFile(file) :
                 await fetchPublicFile(file);
         } catch (e) {
-            console.log('⚠ Failed to download file: ' + file.path, e);
+            if (!config?.muteLog) console.log('⚠ Failed to download file: ' + file.path, e);
+
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
             try {
                 response = repoIsPrivate ? await fetchPrivateFile(file) :
                     await fetchPublicFile(file);
             } catch (e) {
-                console.log('⚠ Failed to download file after second attempt: ' + file.path, e);
+                if (!config?.muteLog) console.log('⚠ Failed to download file after second attempt: ' + file.path, e);
                 return;
             }
         }
@@ -194,7 +209,7 @@ export default async function download(source: string, saveTo: string, config?: 
             stats.files[file.path] = fileName;
 
         } catch (e) {
-            console.error('Failed to write file: ' + file.path, e);
+            if (!config?.muteLog) console.error('Failed to write file: ' + file.path, e);
         }
     };
 
@@ -212,7 +227,7 @@ export default async function download(source: string, saveTo: string, config?: 
     await Promise.all(statuses);
 
 
-    console.log(`Downloaded ${downloaded}/${files.length} files`);
+    if (!config?.muteLog) console.log(`Downloaded ${downloaded}/${files.length} files`);
 
     stats.downloaded = downloaded;
 
