@@ -27,7 +27,7 @@ const stats = await download(
 You can also pass options as a third argument:
 ```typescript
 {
-    /** JWT token for authorization in private repositories */
+    /** GitHub API token */
     token?: string;
 
     /** Max number of async requests at the same time. 10 by default.

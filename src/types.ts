@@ -1,5 +1,5 @@
 export type Config = {
-    /** JWT token for authorization in private repositories */
+    /** GitHub token for authorization in private repositories */
     token?: string;
 
     /** Max number of async requests at the same time. 10 by default.

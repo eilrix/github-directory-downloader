@@ -152,8 +152,15 @@ export default async function download(source: string, saveTo: string, config?: 
     if (!config?.muteLog) console.log(`Downloading ${files.length} files…`);
 
 
-    const fetchPublicFile = async (file: TreeItem) => {
-        const response = await fetch(`https://raw.githubusercontent.com/${user}/${repository}/${ref}/${file.path}`);
+    const fetchFile = async (file: TreeItem) => {
+        const response = await fetch(
+            `https://raw.githubusercontent.com/${user}/${repository}/${ref}/${file.path}`,
+            config?.token ? {
+                headers: {
+                    Authorization: `Bearer ${config?.token}`
+                },
+            } : undefined
+        );
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.statusText} for ${file.path}`);
@@ -162,36 +169,19 @@ export default async function download(source: string, saveTo: string, config?: 
         return response;
     };
 
-    const fetchPrivateFile = async (file: TreeItem) => {
-        const response = await fetch(file.url, {
-            headers: {
-                Authorization: `Bearer ${config?.token}`
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.statusText} for ${file.path}`);
-        }
-
-        const { content } = await response.json();
-        return await fetch(`data:application/octet-stream;base64,${content}`);
-    };
-
     let downloaded = 0;
 
     const download = async (file: TreeItem) => {
         let response;
         try {
-            response = repoIsPrivate ? await fetchPrivateFile(file) :
-                await fetchPublicFile(file);
+            response = await fetchFile(file);
         } catch (e) {
             if (!config?.muteLog) console.log('⚠ Failed to download file: ' + file.path, e);
 
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             try {
-                response = repoIsPrivate ? await fetchPrivateFile(file) :
-                    await fetchPublicFile(file);
+                response = await fetchFile(file);
             } catch (e) {
                 if (!config?.muteLog) console.log('⚠ Failed to download file after second attempt: ' + file.path, e);
                 return;
