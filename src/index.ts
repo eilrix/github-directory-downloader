@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
-import { dirname, resolve } from 'path';
+import { dirname, isAbsolute, resolve } from 'path';
 import { promisify } from 'util';
 
 import { Config, Stats, TreeItem } from './types';
@@ -121,6 +121,11 @@ export default async function download(source: string, saveTo: string, config?: 
         stats.error = 'Invalid url';
         return stats;
     }
+
+    if (!saveTo) {
+        saveTo = resolve(process.cwd(), dir);
+    }
+    if (!isAbsolute(saveTo)) saveTo = resolve(process.cwd(), saveTo);
 
 
     let meta;
