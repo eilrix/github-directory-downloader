@@ -1,6 +1,6 @@
 {
   "name": "github-directory-downloader",
-  "version": "1.3.3",
+  "version": "1.3.5",
   "description": "Download just a sub directory from a GitHub repo",
   "main": "dist/index.js",
   "module": "esm",

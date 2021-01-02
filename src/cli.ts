@@ -9,7 +9,7 @@ const cli = async () => {
     const gitUrl = url ?? process.argv[2];
 
     if (!gitUrl || gitUrl === '') {
-        console.log('Error. You need to provide url to download');
+        console.log('Error. You need to provide url to GitHub repo');
         return;
     }
 

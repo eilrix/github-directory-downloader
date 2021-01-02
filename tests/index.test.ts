@@ -8,10 +8,11 @@ const tempDir = resolve(__dirname, '../coverage');
 
 describe('commonjs', function () {
     it('require', async function () {
-
         const download = require('../dist/index');
         const stats = await download()
+        const stats2 = await download('1234567')
         expect(Boolean(stats)).to.be.true;
+        expect(Boolean(stats2)).to.be.true;
     });
 });
 

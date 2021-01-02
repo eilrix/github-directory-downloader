@@ -109,18 +109,22 @@ async function getRepoMeta(user: string, repository: string, ref: string, dir: s
     }
 }
 
+const parseUrl = (source: string, muteLog?: boolean) => {
+    try {
+        const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
+
+        return [user, repository, ref, dir];
+
+    } catch (e) { }
+    return [];
+}
+
 
 export default async function download(source: string, saveTo: string, config?: Config): Promise<Stats> {
 
     const stats: Stats = { files: {}, downloaded: 0, success: false };
 
-    if (!source) {
-        if (!config?.muteLog) console.error('Invalid url. It must match: ', urlParserRegex);
-        stats.error = 'Invalid url';
-        return stats;
-    }
-
-    const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
+    const [user, repository, ref, dir] = parseUrl(source);
 
     if (!user || !repository) {
         if (!config?.muteLog) console.error('Invalid url. It must match: ', urlParserRegex);
