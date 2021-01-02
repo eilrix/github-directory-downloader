@@ -12,6 +12,13 @@ npm i github-directory-downloader
 ```
 
 ## Usage
+
+#### CLI
+```sh
+github-directory-downloader https://github.com/mrdoob/three.js/tree/dev/docs/manual --dir=temp --token=******
+```
+#### Programmatic
+
 ```typescript
 import download from 'github-directory-downloader';
 import { resolve } from 'path';
