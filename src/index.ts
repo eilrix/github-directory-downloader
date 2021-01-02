@@ -114,6 +114,12 @@ export default async function download(source: string, saveTo: string, config?: 
 
     const stats: Stats = { files: {}, downloaded: 0, success: false };
 
+    if (!source) {
+        if (!config?.muteLog) console.error('Invalid url. It must match: ', urlParserRegex);
+        stats.error = 'Invalid url';
+        return stats;
+    }
+
     const [, user, repository, ref, dir] = urlParserRegex.exec(new URL(source).pathname) ?? [];
 
     if (!user || !repository) {
